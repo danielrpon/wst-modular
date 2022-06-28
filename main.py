@@ -1,5 +1,5 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+import csv
+import os
 
 from scrappers.base import BaseScrapper
 
@@ -27,6 +27,35 @@ configuraciones = [
 # Instanciar un scrapper (por fuente)
 scrapper = BaseScrapper(**configuraciones[0])
 
-for index, product in enumerate(scrapper.get_products("desodorante rexona")):
-    print(product.sku, product.product_name)
-    # Escribir to CSV
+# CSV File Salida
+output_file_path = os.path.join("./", "resultado.csv")
+file_exists = os.path.exists(output_file_path)
+mode = "w+" if not file_exists else "a"
+with open(output_file_path, mode, newline="", encoding="ISO-8859-1") as output_file:
+    # Encabezados
+    fields = [
+        "sku",
+        "brand",
+        "product_name",
+        "precio_normal",
+        "precio_descuento",
+        "imagen",
+    ]
+    writer = csv.DictWriter(output_file, fieldnames=fields)
+    if not file_exists:
+        writer.writeheader()
+
+    for index, product in enumerate(scrapper.get_products("desodorante rexona")):
+        print(product.sku, product.product_name)
+        # Escribir to CSV
+
+        writer.writerow(
+            {
+                "sku": product.sku,
+                "brand": product.brand,
+                "product_name": product.product_name,
+                "precio_normal": product.regular_price,
+                "precio_descuento": product.discount_price,
+                "imagen": product.image,
+            }
+        )
