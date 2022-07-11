@@ -9,8 +9,9 @@ class Product:
     def __init__(self, *args, **kwargs):
         for attribute, value in kwargs.items():
             # Verificar si tiene un metodo personalizado
-            if hasattr(self, f"{attribute}_setter"):
-                setter = getattr(self, f"{attribute}_setter")
+            setter_name = attribute.replace("_selector", "_setter")
+            if hasattr(self, setter_name):
+                setter = getattr(self, setter_name)
                 setter(value)
                 continue
 
@@ -22,7 +23,7 @@ class Product:
 class ExitoProduct(Product):
     def sku_setter(self, value=None):
         """Extractor personalizado del valor que contiene la etiqueta html para sku."""
-        self.sku = value["attrs"]["name"]
+        self.sku = value.attrs["name"]
 
     def discount_price_setter(self, value=None):
         """Extractor personalizado del valor que contiene la etiqueta html para precio con descuento."""
@@ -42,4 +43,16 @@ class ExitoProduct(Product):
 
     def image_setter(self, value=None):
         if value is not None:
-            self.image = value["attrs"]["src"]
+            self.image = value.attrs["src"]
+
+
+class FarmatodoProduct(Product):
+    def sku_setter(self, value=None):
+        """Establece un valor para el SKU a partir del data-cuf"""
+        if value is not None:
+            self.sku = value.attrs["data-cuf"]
+
+    def image_setter(self, value=None):
+        """Establece un valor para la Imagen a partir de la url presente en el src"""
+        if value is not None:
+            self.image = value.attrs["src"]

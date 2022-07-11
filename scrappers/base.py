@@ -5,12 +5,15 @@ from urllib.request import Request, urlopen
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.common.exceptions import (ElementNotInteractableException,
-                                        JavascriptException,
-                                        NoSuchElementException,
-                                        TimeoutException)
+from selenium.common.exceptions import (
+    ElementNotInteractableException,
+    JavascriptException,
+    NoSuchElementException,
+    TimeoutException,
+)
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support import expected_conditions
@@ -30,11 +33,12 @@ class BaseScrapper:
     search_placeholder = "guaro"
     page_placeholder = "pagenum"
     stop_behavior = None
-    product_class = ExitoProduct
+    page_type = None
+    product_class = Product
     pages = None
     products = None
     page_number = 0
-    max_time_out = 30
+    max_time_out = 60
     do_scroll = False
 
     # Selectors
@@ -58,6 +62,11 @@ class BaseScrapper:
     STOP_IF_SELECTOR_NOT_PRESENT = 2
     STOP_IF_PRODUCT_COUNT_REACHED = 3
     STOP_IF_PAGE_COUNT_REACHED = 4
+    STOP_IF_SELECTOR_IS_DISABLED = 5
+
+    # Opciones de navegación
+    SINGLE_PAGE = 1
+    SSR_PAGE = 2
 
     _headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"
@@ -98,11 +107,14 @@ class BaseScrapper:
         # Obtener las paginas
 
         has_products = True
-        # 2.1 Caso 1 paginas diferentes por URL
+
         while has_products:
             logging.info(f"Obteniendo Pagina {self.page_number}")
             page_source = None
-            driver.get(self.get_search_url())
+
+            # Controlar el tipo de página
+            if not len(self.pages):
+                driver.get(self.get_search_url())
 
             # Scroll
             if self.do_scroll:
@@ -119,7 +131,7 @@ class BaseScrapper:
                     time.sleep(0.5)
 
             try:
-                WebDriverWait(driver, self.max_time_out).until(
+                WebDriverWait(driver, self.max_time_out, poll_frequency=0.5).until(
                     expected_conditions.presence_of_all_elements_located(
                         (By.CSS_SELECTOR, self.product_selector)
                     )
@@ -127,7 +139,16 @@ class BaseScrapper:
             except TimeoutException:
                 logging.warning(f"Timeout en Página {self.page_number}")
 
+            if self.page_type == self.SSR_PAGE:
+                driver.get(self.get_search_url())
+            elif self.page_type == self.SINGLE_PAGE:
+                # Ir a hacer click en el boton de ver más/cargar más
+                driver.execute_script(
+                    f'document.querySelector("{self.pagination_selector}").click();'
+                )
+
             page_source = driver.page_source
+
             # Detener
             if self.stop_behavior == self.STOP_IF_NO_PRODUCTS:
                 # verificar si hay productos
@@ -140,9 +161,20 @@ class BaseScrapper:
                 pass
             elif self.stop_behavior == self.STOP_IF_PAGE_COUNT_REACHED:
                 pass
+            elif self.stop_behavior == self.STOP_IF_SELECTOR_IS_DISABLED:
+                soup = BeautifulSoup(page_source, "html.parser")
+                has_products = (
+                    not "disabled"
+                    in soup.select(self.pagination_selector)[0].attrs.keys()
+                )
 
             # Agregar Html de la pagina
-            self.pages.append(page_source)
+            if self.page_type == self.SINGLE_PAGE:
+                if not len(self.pages):
+                    self.pages.append(page_source)
+                self.pages[0] = page_source
+            elif self.page_type == self.SSR_PAGE:
+                self.pages.append(page_source)
 
         # 2.1 Caso 2 click en selector css (Cargar más: Exito, Farmatodo)
         return self.pages
@@ -169,14 +201,15 @@ class BaseScrapper:
             options.page_load_strategy = "normal"
             # options.add_argument("--headless")
             # options.add_argument("--no-sandbox")
-            options.add_argument(
-                "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0"
-            )
+            # options.add_argument(
+            #     "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0"
+            # )
 
             service = Service(executable_path=GeckoDriverManager().install())
             self.selenium_driver = webdriver.Firefox(
                 service=service,
                 options=options,
+                desired_capabilities=DesiredCapabilities.FIREFOX.copy(),
             )
 
         return self.selenium_driver
@@ -196,9 +229,11 @@ class BaseScrapper:
         selector_data = {}
         # Obtener el valor de cada selector
         for attribute in attributes:
-            selector_data[attribute] = product.select_one(
-                getattr(self, attribute, None)
-            )
-        # instanciar la dataclass
+            if getattr(self, attribute, None) is not None:
+                selector_data[attribute] = product.select_one(
+                    getattr(self, attribute, None)
+                )
+            else:
+                selector_data[attribute] = None
 
         return self.product_class(**selector_data)
