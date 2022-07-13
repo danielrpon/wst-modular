@@ -19,6 +19,11 @@ class Product:
             if value is not None:
                 setattr(self, attribute.replace("_selector", ""), value.text)
 
+    def image_setter(self, value=None):
+        """Establece un valor para la Imagen a partir de la url presente en el src"""
+        if value is not None:
+            self.image = value.attrs["src"]
+
 
 class ExitoProduct(Product):
     def sku_setter(self, value=None):
@@ -28,7 +33,7 @@ class ExitoProduct(Product):
     def discount_price_setter(self, value=None):
         """Extractor personalizado del valor que contiene la etiqueta html para precio con descuento."""
         if value is not None:
-            self.discount_price = value.text
+            self.discount_price = value.text.replace(".", "")[2:]
         else:
             if self.regular_price:
                 self.discount_price = self.regular_price
@@ -36,14 +41,10 @@ class ExitoProduct(Product):
     def regular_price_setter(self, value=None):
         """VAlidador para el caso de los precios."""
         if value is not None:
-            self.regular_price = value.text
+            self.regular_price = value.text.replace(".", "")[2:]
 
         if self.discount_price is None:
             self.discount_price = self.regular_price
-
-    def image_setter(self, value=None):
-        if value is not None:
-            self.image = value.attrs["src"]
 
 
 class FarmatodoProduct(Product):
@@ -52,7 +53,49 @@ class FarmatodoProduct(Product):
         if value is not None:
             self.sku = value.attrs["data-cuf"]
 
-    def image_setter(self, value=None):
-        """Establece un valor para la Imagen a partir de la url presente en el src"""
+    def get_cleaned_price(self, value=None):
+        """Funcion auxilar para convertir $15.600 en 15600"""
         if value is not None:
-            self.image = value.attrs["src"]
+            return value.text.replace(".", "")[1:]
+        return None
+
+    def regular_price_setter(self, value=None):
+        """Asigna el valor del precio regular"""
+        self.regular_price = self.get_cleaned_price(value=value)
+        if self.discount_price is None:
+            self.discount_price = self.regular_price
+
+    def discount_price_setter(self, value=None):
+        """Asigna el valor del precio con descuento"""
+        if value is not None:
+            self.discount_price = self.get_cleaned_price(value=value)
+        else:
+            if self.regular_price:
+                self.discount_price = self.regular_price
+
+
+class JumboProduct(Product):
+    def sku_setter(self, value=None):
+        """Procesa la información de SKU a partir del Checkbox de comparar."""
+        if value is not None:
+            self.sku = value.attrs["id"].split("-")[0]
+
+    def get_cleaned_price(self, value=None):
+        """Funcion auxilar para convertir $15.600 en 15600"""
+        if value is not None:
+            return value.text.replace(".", "")[2:]
+        return None
+
+    def regular_price_setter(self, value=None):
+        """Asigna el valor del precio regular"""
+        self.regular_price = self.get_cleaned_price(value=value)
+        if self.discount_price is None:
+            self.discount_price = self.regular_price
+
+    def discount_price_setter(self, value=None):
+        """Asigna el valor del precio con descuento"""
+        if value is not None:
+            self.discount_price = self.get_cleaned_price(value=value)
+        else:
+            if self.regular_price:
+                self.discount_price = self.regular_price

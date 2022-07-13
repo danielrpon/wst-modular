@@ -22,7 +22,7 @@ from webdriver_manager.firefox import GeckoDriverManager
 
 from structures.products import ExitoProduct, Product
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+logging.getLogger(__name__).addHandler(logging.StreamHandler(sys.stdout))
 
 
 class BaseScrapper:
@@ -96,6 +96,8 @@ class BaseScrapper:
             for product in soup.select(self.product_selector):
                 product_data = self.get_product_data(product)
                 self.products.append(product_data)
+        # Close Browser
+        self.get_selenium_driver().quit()
         return self.products
 
     def get_pages_source(self):
@@ -112,36 +114,16 @@ class BaseScrapper:
             logging.info(f"Obteniendo Pagina {self.page_number}")
             page_source = None
 
-            # Controlar el tipo de página
             if not len(self.pages):
                 driver.get(self.get_search_url())
 
-            # Scroll
-            if self.do_scroll:
-                scroll_height = driver.execute_script(
-                    "return document.body.scrollHeight"
-                )
-                y_pos = 0
-                while y_pos < scroll_height:
-                    y_pos += 100
-                    driver.execute_script(f"window.scroll(0,{y_pos})")
-                    scroll_height = driver.execute_script(
-                        "return document.body.scrollHeight"
-                    )
-                    time.sleep(0.5)
-
-            try:
-                WebDriverWait(driver, self.max_time_out, poll_frequency=0.5).until(
-                    expected_conditions.presence_of_all_elements_located(
-                        (By.CSS_SELECTOR, self.product_selector)
-                    )
-                )
-            except TimeoutException:
-                logging.warning(f"Timeout en Página {self.page_number}")
-
+            # Controlar el tipo de página
             if self.page_type == self.SSR_PAGE:
-                driver.get(self.get_search_url())
+                if len(self.pages):
+                    driver.get(self.get_search_url())
+                self.load_page(driver)
             elif self.page_type == self.SINGLE_PAGE:
+                self.load_page(driver)
                 # Ir a hacer click en el boton de ver más/cargar más
                 driver.execute_script(
                     f'document.querySelector("{self.pagination_selector}").click();'
@@ -178,6 +160,29 @@ class BaseScrapper:
 
         # 2.1 Caso 2 click en selector css (Cargar más: Exito, Farmatodo)
         return self.pages
+
+    def load_page(self, driver):
+        """Espera a la carga del sitio y realiza Scroll para cargar productos."""
+        # Scroll
+        if self.do_scroll:
+            scroll_height = driver.execute_script("return document.body.scrollHeight")
+            y_pos = 0
+            while y_pos < scroll_height:
+                y_pos += 100
+                driver.execute_script(f"window.scroll(0,{y_pos})")
+                scroll_height = driver.execute_script(
+                    "return document.body.scrollHeight"
+                )
+                time.sleep(0.5)
+
+        try:
+            WebDriverWait(driver, self.max_time_out, poll_frequency=0.5).until(
+                expected_conditions.presence_of_all_elements_located(
+                    (By.CSS_SELECTOR, self.product_selector)
+                )
+            )
+        except TimeoutException:
+            logging.warning(f"{self.fuente}-> Timeout en Página {self.page_number}")
 
     def get_current_page_number(self):
         """Retorna la siguiente página para usar en URLS."""
