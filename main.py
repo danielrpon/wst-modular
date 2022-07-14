@@ -26,6 +26,9 @@ configuraciones = [
         "discount_price_selector": "div.exito-vtex-components-4-x-list-price",
         "image_selector": "img.vtex-product-summary-2-x-image",
         "do_scroll": True,
+        "browser": BaseScrapper.USE_FIREFOX,
+        "show_browser": False,
+        "verbose": True
     },
     {
         "pais": "Colombia",
@@ -44,6 +47,9 @@ configuraciones = [
         "discount_price_selector": "span.text-offer-price",
         "image_selector": "img.image",
         "do_scroll": True,
+        "browser": BaseScrapper.USE_CHROME,
+        "show_browser": True,
+        "verbose":True
     },
     {
         "pais": "Colombia",

@@ -14,15 +14,18 @@ from selenium.common.exceptions import (
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.firefox.service import Service as FirefoxService
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
 
-from structures.products import ExitoProduct, Product
+from structures.products import Product
 
-logging.getLogger(__name__).addHandler(logging.StreamHandler(sys.stdout))
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 
 class BaseScrapper:
@@ -40,6 +43,9 @@ class BaseScrapper:
     page_number = 0
     max_time_out = 60
     do_scroll = False
+    browser = None
+    show_browser = True
+    verbose = False
 
     # Selectors
     product_selector = None
@@ -51,8 +57,6 @@ class BaseScrapper:
     regular_price_selector = None
     discount_price_selector = None
     image_selector = None
-    # TODO Selector para la cantidad de productos
-    # TODO Selector para el paginador o paginas
 
     # Private Access
     search_phrase = None
@@ -68,6 +72,13 @@ class BaseScrapper:
     SINGLE_PAGE = 1
     SSR_PAGE = 2
 
+    # Opciones del Driver
+    USE_CHROME = 1
+    USE_FIREFOX = 2
+
+    # Opciones de Visualización
+    SHOW_BROWSER = False
+
     _headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"
     }
@@ -77,11 +88,14 @@ class BaseScrapper:
         for attribute, value in kwargs.items():
             setattr(self, attribute, value)
 
+        if self.verbose:
+            logging.getLogger().setLevel(logging.INFO)
+
     def get_products(self, search_phrase):
 
         # TODO Cachear las Variable
 
-        logging.info("Obteniendo Productos")
+        logging.info(f"Obteniendo Productos de {self.fuente}")
         # Guardar la frase de busqueda
         self.search_phrase = search_phrase
         self.products = []
@@ -201,22 +215,40 @@ class BaseScrapper:
 
     def get_selenium_driver(self):
         if self.selenium_driver is None:
-            # Default Seleniun Driver Firefox
-            options = Options()
-            options.page_load_strategy = "normal"
-            # options.add_argument("--headless")
-            # options.add_argument("--no-sandbox")
-            # options.add_argument(
-            #     "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0"
-            # )
+            service = None
 
-            service = Service(executable_path=GeckoDriverManager().install())
-            self.selenium_driver = webdriver.Firefox(
-                service=service,
-                options=options,
-                desired_capabilities=DesiredCapabilities.FIREFOX.copy(),
-            )
+            # TODO verificar si el usuario quiere modo oculto
 
+
+            if self.browser in [None, self.USE_CHROME]:
+                options = ChromeOptions()
+                options.page_load_strategy = "normal"
+
+                if not self.show_browser:
+                    options.add_argument("--headless")
+                    options.add_argument("--no-sandbox")
+
+                service = ChromeService(executable_path=ChromeDriverManager().install())
+                self.selenium_driver = webdriver.Chrome(
+                    service=service,
+                    options=options,
+                    desired_capabilities=DesiredCapabilities.CHROME.copy(),
+                )
+
+            if self.browser == self.USE_FIREFOX:
+                options = FirefoxOptions()
+                options.page_load_strategy = "normal"
+
+                if not self.show_browser:
+                    options.add_argument("--headless")
+                    options.add_argument("--no-sandbox")
+
+                service = FirefoxService(executable_path=GeckoDriverManager().install())
+                self.selenium_driver = webdriver.Firefox(
+                    service=service,
+                    options=options,
+                    desired_capabilities=DesiredCapabilities.FIREFOX.copy(),
+                )
         return self.selenium_driver
 
     def get_product_data(self, product):
