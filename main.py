@@ -1,6 +1,7 @@
 import csv
 import os
 
+
 from scrappers.base import BaseScrapper
 
 # Lectura del archivo de entrada
