@@ -100,11 +100,7 @@ for fuente in configuraciones:
     # Instanciar un scrapper (por fuente)
     scrapper_class = fuente["scrapper_class"]
     scrapper = scrapper_class(
-        **{
-            attribute: value
-            for attribute, value in fuente.items()
-            if value != "scrapper_class"
-        }
+        **fuente
     )
 
     for index, product in enumerate(scrapper.get_products("desodorante")):
