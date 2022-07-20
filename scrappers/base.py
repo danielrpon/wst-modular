@@ -156,7 +156,8 @@ class BaseScrapper:
             elif self.stop_behavior == self.STOP_IF_PRODUCT_COUNT_REACHED:
                 pass
             elif self.stop_behavior == self.STOP_IF_PAGE_COUNT_REACHED:
-                pass
+                if self.get_current_page_number() >= self.get_page_count():
+                    has_products = False
             elif self.stop_behavior == self.STOP_IF_SELECTOR_IS_DISABLED:
                 soup = BeautifulSoup(page_source, "html.parser")
                 has_products = (
@@ -219,7 +220,6 @@ class BaseScrapper:
 
             # TODO verificar si el usuario quiere modo oculto
 
-
             if self.browser in [None, self.USE_CHROME]:
                 options = ChromeOptions()
                 options.page_load_strategy = "normal"
@@ -274,3 +274,9 @@ class BaseScrapper:
                 selector_data[attribute] = None
 
         return self.product_class(**selector_data)
+
+
+class D1Scrapper(BaseScrapper):
+    def get_page_count(self):
+        """Personalización para dejar solo 1 Pagina"""
+        return 1
