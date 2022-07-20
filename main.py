@@ -1,16 +1,18 @@
-import csv
-import os
-
-
-from scrappers.base import BaseScrapper
+from scrappers.base import BaseScrapper, D1Scrapper
 
 # Lectura del archivo de entrada
-from structures.products import FarmatodoProduct, ExitoProduct, JumboProduct, Product
+from structures.products import (
+    FarmatodoProduct,
+    ExitoProduct,
+    JumboProduct,
+    D1Product,
+)
 
 configuraciones = [
     {
         "pais": "Colombia",
         "fuente": "Exito.com",
+        "scrapper_class": BaseScrapper,
         "url": "https://www.exito.com/guaro?_q=guaro&map=ft&page=pagenum",
         "product_class": ExitoProduct,
         "search_placeholder": "guaro",
@@ -29,11 +31,12 @@ configuraciones = [
         "do_scroll": True,
         "browser": BaseScrapper.USE_FIREFOX,
         "show_browser": False,
-        "verbose": True
+        "verbose": True,
     },
     {
         "pais": "Colombia",
         "fuente": "Farmatodo",
+        "scrapper_class": BaseScrapper,
         "product_class": FarmatodoProduct,
         "url": "https://www.farmatodo.com.co/buscar?product=filemon&departamento=Todos&filtros=",
         "search_placeholder": "filemon",
@@ -50,11 +53,12 @@ configuraciones = [
         "do_scroll": True,
         "browser": BaseScrapper.USE_CHROME,
         "show_browser": True,
-        "verbose":True
+        "verbose": True,
     },
     {
         "pais": "Colombia",
         "fuente": "Tiendas Jumbo",
+        "scrapper_class": BaseScrapper,
         "product_class": JumboProduct,
         "url": "https://www.tiendasjumbo.co/bandeja?_q=bandeja&map=ft",
         "search_placeholder": "bandeja",
@@ -69,17 +73,46 @@ configuraciones = [
         "discount_price_selector": "section:nth-child(1) > a:nth-child(1) > article:nth-child(1) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1)",
         "image_selector": "img.vtex-product-summary-2-x-imageNormal",
         "do_scroll": True,
+        "browser": BaseScrapper.USE_FIREFOX,
+    },
+    {
+        "pais": "Colombia",
+        "scrapper_class": D1Scrapper,
+        "product_class": D1Product,
+        "fuente": "D1.com",
+        "url": "https://domicilios.tiendasd1.com/search?name=placeholder",
+        "search_placeholder": "placeholder",
+        "product_selector": "div.card-product-vertical",
+        "stop_behavior": BaseScrapper.STOP_IF_PAGE_COUNT_REACHED,
+        "page_type": BaseScrapper.SSR_PAGE,
+        "sku_selector": "img.prod__image__img",
+        "product_name_selector": "img.prod__image__img",
+        "regular_price_selector": "p.prod--default__price__current",
+        "discount_price_selector": "p.prod--default__price__special-off",
+        "image_selector": "img.prod__image__img",
+        "do_scroll": True,
+        "browser": BaseScrapper.USE_FIREFOX,
+        "show_browser": True,
+        "verbose": True,
     },
 ]
 for fuente in configuraciones:
     # Instanciar un scrapper (por fuente)
-    scrapper = BaseScrapper(**fuente)
-    for index, product in enumerate(scrapper.get_products("desodorante lady")):
+    scrapper_class = fuente["scrapper_class"]
+    scrapper = scrapper_class(
+        **{
+            attribute: value
+            for attribute, value in fuente.items()
+            if value != "scrapper_class"
+        }
+    )
+
+    for index, product in enumerate(scrapper.get_products("desodorante")):
         print(
-            product.sku,
-            product.brand,
-            product.product_name,
-            product.regular_price,
-            product.discount_price,
-            product.image,
+            f"sku: {product.sku}",
+            f"brand: {product.brand}",
+            f"product_name: {product.product_name}",
+            f"regular_price: {product.regular_price}",
+            f"discount_price: {product.discount_price}",
+            f"image: {product.image}",
         )
