@@ -138,6 +138,7 @@ class BaseScrapper:
                 self.load_page(driver)
             elif self.page_type == self.SINGLE_PAGE:
                 self.load_page(driver)
+                self.get_current_page_number()
                 # Ir a hacer click en el boton de ver más/cargar más
                 driver.execute_script(
                     f'document.querySelector("{self.pagination_selector}").click();'
@@ -223,7 +224,10 @@ class BaseScrapper:
             if self.browser in [None, self.USE_CHROME]:
                 options = ChromeOptions()
                 options.page_load_strategy = "normal"
-
+                options.add_argument(
+                    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0")
+                options.add_experimental_option("excludeSwitches", ["enable-logging"])
+                options.add_argument("--disable-gpu")
                 if not self.show_browser:
                     options.add_argument("--headless")
                     options.add_argument("--no-sandbox")
@@ -238,6 +242,8 @@ class BaseScrapper:
             if self.browser == self.USE_FIREFOX:
                 options = FirefoxOptions()
                 options.page_load_strategy = "normal"
+                options.add_argument(
+                    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0")
 
                 if not self.show_browser:
                     options.add_argument("--headless")
