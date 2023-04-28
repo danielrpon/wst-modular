@@ -1,5 +1,9 @@
+import re
+
+
 class Product:
     sku = None
+    ean = None
     brand = None
     product_name = None
     regular_price = None
@@ -28,7 +32,10 @@ class Product:
 class ExitoProduct(Product):
     def sku_setter(self, value=None):
         """Extractor personalizado del valor que contiene la etiqueta html para sku."""
-        self.sku = value.attrs["name"]
+        if value is not None:
+            self.sku = value.attrs["id"]
+        else:
+            self.sku = ""
 
     def discount_price_setter(self, value=None):
         """Extractor personalizado del valor que contiene la etiqueta html para precio con descuento."""
@@ -132,3 +139,43 @@ class D1Product(Product):
         if self.discount_price == "":
             if self.regular_price:
                 self.discount_price = self.regular_price
+
+class OlimpicaProduct(Product):
+
+    def ean_setter(self, value=None):
+        """Procesa la información de EAN desde la url de la imagen."""
+        if value is not None:
+            href = value.attrs["href"]
+            matches = re.search(r"-(\d*)-(\d*)\/p", href)
+            if matches is not None:
+                self.ean = matches.group(1)
+
+    def sku_setter(self, value=None):
+        """Procesa la información de SKU desde la url de la imagen."""
+        if value is not None:
+            href = value.attrs["href"]
+            matches = re.search(r"-(\d*)-(\d*)\/p", href)
+            if matches is not None:
+                self.sku = matches.group(2)
+
+    def regular_price_setter(self, value=None):
+        """Asigna el valor del precio regular"""
+        if value is not None:
+            self.regular_price = self.get_cleaned_price(value=value.text[6:])
+        if self.discount_price is None:
+            self.discount_price = self.regular_price
+
+    def discount_price_setter(self, value=None):
+        """Asigna el valor del precio con descuento"""
+        if value is not None:
+            self.discount_price = self.get_cleaned_price(value=value.text)
+
+        if self.discount_price == "" or self.discount_price is None:
+            if self.regular_price:
+                self.discount_price = self.regular_price
+
+    def get_cleaned_price(self, value=None):
+        """Funcion auxilar para convertir $15.600 en 15600"""
+        if value is not None:
+            return str(value.replace(".", "")[2:]).strip()
+        return None

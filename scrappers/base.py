@@ -40,6 +40,7 @@ class BaseScrapper:
     product_class = Product
     pages = None
     products = None
+    products_per_page = 1
     page_number = 0
     max_time_out = 60
     do_scroll = False
@@ -52,6 +53,7 @@ class BaseScrapper:
     product_count_selector = None
     pagination_selector = None
     sku_selector = None
+    ean_selector = None
     brand_selector = None
     product_name_selector = None
     regular_price_selector = None
@@ -125,7 +127,7 @@ class BaseScrapper:
         has_products = True
 
         while has_products:
-            logging.info(f"Obteniendo Pagina {self.page_number}")
+            logging.info(f"Obteniendo Pagina {self.page_number+1}")
             page_source = None
 
             if not len(self.pages):
@@ -150,7 +152,8 @@ class BaseScrapper:
             if self.stop_behavior == self.STOP_IF_NO_PRODUCTS:
                 # verificar si hay productos
                 soup = BeautifulSoup(page_source, "html.parser")
-                has_products = bool(len(soup.select(self.product_selector)))
+                total_products = len(soup.select(self.product_selector))
+                has_products = bool(total_products)
             elif self.stop_behavior == self.STOP_IF_SELECTOR_NOT_PRESENT:
                 soup = BeautifulSoup(page_source, "html.parser")
                 has_products = bool(len(soup.select(self.pagination_selector)))
@@ -172,7 +175,8 @@ class BaseScrapper:
                     self.pages.append(page_source)
                 self.pages[0] = page_source
             elif self.page_type == self.SSR_PAGE:
-                self.pages.append(page_source)
+                if has_products:
+                    self.pages.append(page_source)
 
         # 2.1 Caso 2 click en selector css (Cargar más: Exito, Farmatodo)
         return self.pages
@@ -198,14 +202,14 @@ class BaseScrapper:
                 )
             )
         except TimeoutException:
-            logging.warning(f"{self.fuente}-> Timeout en Página {self.page_number}")
+            logging.warning(f"{self.fuente}-> No se encontraron productos en la página {self.page_number}")
 
     def get_current_page_number(self):
         """Retorna la siguiente página para usar en URLS."""
         self.page_number += 1
         return self.page_number
 
-    def get_page_count(self):
+    def get_page_count(self,total_products):
         """Retornar la cantidad de páginas totales que puede contener la consulta."""
         pass
 
@@ -260,8 +264,10 @@ class BaseScrapper:
     def get_product_data(self, product):
         """Recorre los selectores en busca de sus valores."""
         # Obtener una lista de atributos de selectores
+        # TODO mover a una constante de clase
         attributes = [
             "sku_selector",
+            "ean_selector",
             "brand_selector",
             "product_name_selector",
             "regular_price_selector",
@@ -286,3 +292,8 @@ class D1Scrapper(BaseScrapper):
     def get_page_count(self):
         """Personalización para dejar solo 1 Pagina"""
         return 1
+
+class OlimpicaScrapper(BaseScrapper):
+    def get_page_count(self,total_products):
+        """Personalización para paginado"""
+        return int(total_products/self.products_per_page)

@@ -2,17 +2,18 @@ import csv
 import datetime
 import os
 
-from scrappers.base import BaseScrapper, D1Scrapper
+from scrappers.base import BaseScrapper, D1Scrapper, OlimpicaScrapper
 
 # Lectura del archivo de entrada
 from structures.products import (
     FarmatodoProduct,
     ExitoProduct,
     JumboProduct,
-    D1Product,
+    D1Product, Product, OlimpicaProduct,
 )
 
 configuraciones = [
+    # Funciona
     # {
     #     "pais": "Colombia",
     #     "fuente": "Exito.com",
@@ -23,10 +24,10 @@ configuraciones = [
     #     "page_placeholder": "pagenum",
     #     "product_selector": "div.vtex-search-result-3-x-galleryItem",
     #     "product_count_selector": ".vtex-search-result-3-x-totalProducts--layout > span:nth-child(1)",
-    #     "stop_behavior": BaseScrapper.STOP_IF_NO_PRODUCTS,
+    #     "stop_behavior": BaseScrapper.STOP_IF_SELECTOR_NOT_PRESENT,
     #     "page_type": BaseScrapper.SSR_PAGE,
     #     "pagination_selector": ".min-h-small",
-    #     "sku_selector": "div.exito-product-details-3-x-elementScroll",
+    #     "sku_selector": "div.exito-buy-list-0-x-buttonAddToList",
     #     "brand_selector": "span.vtex-product-summary-2-x-productBrandName",
     #     "product_name_selector": "span.vtex-store-components-3-x-productBrand",
     #     "regular_price_selector": "div.exito-vtex-components-4-x-list-price",
@@ -37,6 +38,7 @@ configuraciones = [
     #     "show_browser": True,
     #     "verbose": True,
     # },
+    # FUNCIONA
     {
         "pais": "Colombia",
         "fuente": "Farmatodo",
@@ -59,6 +61,7 @@ configuraciones = [
         "show_browser": True,
         "verbose": True,
     },
+    # Se debe configurar paginador (funciona recorriendo la lista de elementos del paginador tiendasjumboqaio-jumbo-fetch-more-paginator-0-x-buttonPerPage)
     # {
     #     "pais": "Colombia",
     #     "fuente": "Tiendas Jumbo",
@@ -79,6 +82,7 @@ configuraciones = [
     #     "do_scroll": True,
     #     "browser": BaseScrapper.USE_CHROME,
     # },
+    # FUNCIONA pero está pendiente obtener la marca (se encuentra dentro de Modal)
     # {
     #     "pais": "Colombia",
     #     "scrapper_class": D1Scrapper,
@@ -89,16 +93,40 @@ configuraciones = [
     #     "product_selector": "div.card-product-vertical",
     #     "stop_behavior": BaseScrapper.STOP_IF_PAGE_COUNT_REACHED,
     #     "page_type": BaseScrapper.SSR_PAGE,
-    #     "sku_selector": "img.prod__image__img",
-    #     "product_name_selector": "img.prod__image__img",
-    #     "regular_price_selector": "p.prod--default__price__current",
-    #     "discount_price_selector": "p.prod--default__price__special-off",
-    #     "image_selector": "img.prod__image__img",
+    #     "sku_selector": "img.prod__figure__img",
+    #     "product_name_selector": "img.prod__figure__img",
+    #     "regular_price_selector": "p.base__price",
+    #     "discount_price_selector": "p.base__price",
+    #     "image_selector": "img.prod__figure__img",
     #     "do_scroll": True,
     #     "browser": BaseScrapper.USE_CHROME,
     #     "show_browser": True,
     #     "verbose": True,
     # },
+    {
+        "pais": "Colombia",
+        "scrapper_class": OlimpicaScrapper,
+        "product_class": OlimpicaProduct,
+        "fuente": "Olimpica",
+        "url": "https://www.olimpica.com/placeholder?_q=placeholder&map=ft&page=pagenum",
+        "search_placeholder": "placeholder",
+        "page_placeholder": "pagenum",
+        "product_count_selector": "div.vtex-search-result-3-x-totalProducts--layout",
+        "product_selector": "div.vtex-search-result-3-x-galleryItem",
+        "producs_per_page": 12,
+        "stop_behavior": BaseScrapper.STOP_IF_NO_PRODUCTS,
+        "page_type": BaseScrapper.SSR_PAGE,
+        "ean_selector": "a.vtex-product-summary-2-x-clearLink--product-summary",
+        "sku_selector": "a.vtex-product-summary-2-x-clearLink--product-summary",
+        "product_name_selector": "span.vtex-product-summary-2-x-productBrand",
+        "discount_price_selector": "div.vtex-product-price-1-x-sellingPrice--hasListPrice--dynamicF",
+        "regular_price_selector": "div.olimpica-dinamic-flags-0-x-strikePrice",
+        "image_selector": "img.vtex-product-summary-2-x-image",
+        "do_scroll": True,
+        "browser": BaseScrapper.USE_CHROME,
+        "show_browser": True,
+        "verbose": True,
+    },
 ]
 
 # CSV
@@ -110,6 +138,7 @@ with open(output_file_path, mode, newline="", encoding="ISO-8859-1") as output_f
     fields = [
             "fecha",
             "sku",
+            "ean",
             "pais",
             "fuente",
             "brand",
@@ -129,11 +158,12 @@ with open(output_file_path, mode, newline="", encoding="ISO-8859-1") as output_f
             **fuente
         )
 
-        for index, product in enumerate(scrapper.get_products("Desodorante Lady Speed")):
+        for index, product in enumerate(scrapper.get_products("desodorante rexona")):
              writer.writerow(
                 {
                 "fecha": datetime.datetime.now(),
                 "sku": product.sku,
+                "ean": product.ean,
                 "pais": fuente["pais"].title(),
                 "fuente": fuente["fuente"].title(),
                 "brand": product.brand,
