@@ -179,3 +179,28 @@ class OlimpicaProduct(Product):
         if value is not None:
             return str(value.replace(".", "")[2:]).strip()
         return None
+
+
+class MercadolibreProduct(Product):
+    def sku_setter(self, value=None):
+        """Procesa la información de SKU desde la url del producto."""
+        if value is not None:
+            href = value.attrs["href"]
+            matches = re.search(r"/MCO-*([0-9]*)", href)
+            if matches is not None:
+                self.sku = matches.group(1)
+
+
+    def regular_price_setter(self, value=None):
+        if value is not None:
+            matches = re.search(r"\w: (\d*)", value.text)
+            if matches is not None:
+                self.regular_price = matches.group(1)
+
+    def discount_price_setter(self, value=None):
+        if value is not None:
+            matches = re.search(r"(\d*) ", value.text)
+            if matches is not None:
+                self.discount_price = matches.group(1)
+                if self.regular_price is None:
+                    self.regular_price = self.discount_price

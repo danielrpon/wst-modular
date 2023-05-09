@@ -142,9 +142,13 @@ class BaseScrapper:
                 self.load_page(driver)
                 self.get_current_page_number()
                 # Ir a hacer click en el boton de ver más/cargar más
-                driver.execute_script(
-                    f'document.querySelector("{self.pagination_selector}").click();'
-                )
+                try:
+                    driver.execute_script(
+                        f'document.querySelector("{self.pagination_selector}").click();'
+                    )
+                except JavascriptException:
+                    logging.warning(f"{self.fuente}-> No se encontró un selector de página siguiente.")
+
 
             page_source = driver.page_source
 
@@ -157,6 +161,7 @@ class BaseScrapper:
             elif self.stop_behavior == self.STOP_IF_SELECTOR_NOT_PRESENT:
                 soup = BeautifulSoup(page_source, "html.parser")
                 has_products = bool(len(soup.select(self.pagination_selector)))
+            # TODO detenerse si alcanza la cantidad total de productos
             elif self.stop_behavior == self.STOP_IF_PRODUCT_COUNT_REACHED:
                 pass
             elif self.stop_behavior == self.STOP_IF_PAGE_COUNT_REACHED:
@@ -193,7 +198,7 @@ class BaseScrapper:
                 scroll_height = driver.execute_script(
                     "return document.body.scrollHeight"
                 )
-                time.sleep(0.5)
+                time.sleep(0.2)
 
         try:
             WebDriverWait(driver, self.max_time_out, poll_frequency=0.5).until(
@@ -297,3 +302,20 @@ class OlimpicaScrapper(BaseScrapper):
     def get_page_count(self,total_products):
         """Personalización para paginado"""
         return int(total_products/self.products_per_page)
+
+
+class MercadolibreScrapper(BaseScrapper):
+    def get_page_count(self,total_products):
+        """Personalización para paginado"""
+        return int(total_products/self.products_per_page)
+
+    def get_search_url(self):
+        """Reemplaza el valor de la palabra de busqueda."""
+        return self.url.replace(self.search_placeholder, self.search_phrase).replace(
+            self.page_placeholder, str(self.get_current_page_number())
+        )
+
+    def get_current_page_number(self):
+        """Retorna la siguiente página para usar en URLS."""
+        self.page_number += 1
+        return self.page_number
