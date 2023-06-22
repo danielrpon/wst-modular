@@ -35,7 +35,7 @@ with open(output_file_path, mode, newline="", encoding="ISO-8859-1") as output_f
             **fuente
         )
 
-        for index, product in enumerate(scrapper.get_products("gillette Espuma Para Afeitar Sensitive GILLETTE 150 gr")):
+        for index, product in enumerate(scrapper.get_products("Pantene")):
             writer.writerow(
                 {
                     "fecha": datetime.datetime.now(),
