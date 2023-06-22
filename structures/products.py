@@ -204,3 +204,16 @@ class MercadolibreProduct(Product):
                 self.discount_price = matches.group(1)
                 if self.regular_price is None:
                     self.regular_price = self.discount_price
+
+class InkafarmaProduct(Product):
+    def product_name_setter(self, value=None):
+        if value is not None:
+            self.product_name = value.attrs["alt"]
+
+    def discount_price_setter(self, value=None):
+        if value is not None:
+            matches = re.search(r"(\d*) ", value.text)
+            if matches is not None:
+                self.discount_price = matches.group(1)
+                if self.regular_price is None:
+                    self.regular_price = self.discount_price
