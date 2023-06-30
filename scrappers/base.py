@@ -1,4 +1,5 @@
 import logging
+import re
 import sys
 import time
 from urllib.request import Request, urlopen
@@ -41,6 +42,7 @@ class BaseScrapper:
     pages = None
     products = None
     products_per_page = 1
+    product_count = None
     page_number = 0
     max_time_out = 60
     do_scroll = False
@@ -106,7 +108,6 @@ class BaseScrapper:
         for page in self.get_pages_source():
 
             soup = BeautifulSoup(page, "html.parser")
-            # Procesamiento de Campos
 
             # por cada producto en la pagina extraer los campos
             for product in soup.select(self.product_selector):
@@ -141,13 +142,18 @@ class BaseScrapper:
             elif self.page_type == self.SINGLE_PAGE:
                 self.load_page(driver)
                 self.get_current_page_number()
+                soup = BeautifulSoup(driver.page_source, "html.parser")
+                if self.page_type == self.SINGLE_PAGE and self.product_count_selector is not None:
+                    product_count_selector = soup.select(self.product_count_selector)
+                    self.get_product_count(product_count_selector)
                 # Ir a hacer click en el boton de ver más/cargar más
-                try:
-                    driver.execute_script(
-                        f'document.querySelector("{self.pagination_selector}").click();'
-                    )
-                except JavascriptException:
-                    logging.warning(f"{self.fuente}-> No se encontró un selector de página siguiente.")
+                if self.pagination_selector is not None:
+                    try:
+                        driver.execute_script(
+                            f'document.querySelector("{self.pagination_selector}").click();'
+                        )
+                    except JavascriptException:
+                        logging.warning(f"{self.fuente}-> No se encontró un selector de página siguiente.")
 
 
             page_source = driver.page_source
@@ -161,9 +167,10 @@ class BaseScrapper:
             elif self.stop_behavior == self.STOP_IF_SELECTOR_NOT_PRESENT:
                 soup = BeautifulSoup(page_source, "html.parser")
                 has_products = bool(len(soup.select(self.pagination_selector)))
-            # TODO detenerse si alcanza la cantidad total de productos
             elif self.stop_behavior == self.STOP_IF_PRODUCT_COUNT_REACHED:
-                pass
+                # Single Page get Product Count
+                if self.get_current_page_number() > 1:
+                    has_products = False
             elif self.stop_behavior == self.STOP_IF_PAGE_COUNT_REACHED:
                 if self.get_current_page_number() >= self.get_page_count():
                     has_products = False
@@ -188,6 +195,15 @@ class BaseScrapper:
 
     def load_page(self, driver):
         """Espera a la carga del sitio y realiza Scroll para cargar productos."""
+        try:
+            WebDriverWait(driver, self.max_time_out, poll_frequency=0.5).until(
+                expected_conditions.presence_of_all_elements_located(
+                    (By.CSS_SELECTOR, self.product_selector)
+                )
+            )
+        except TimeoutException:
+            logging.warning(f"{self.fuente}-> No se encontraron productos en la página {self.page_number}")
+
         # Scroll
         if self.do_scroll:
             scroll_height = driver.execute_script("return document.body.scrollHeight")
@@ -200,19 +216,17 @@ class BaseScrapper:
                 )
                 time.sleep(0.2)
 
-        try:
-            WebDriverWait(driver, self.max_time_out, poll_frequency=0.5).until(
-                expected_conditions.presence_of_all_elements_located(
-                    (By.CSS_SELECTOR, self.product_selector)
-                )
-            )
-        except TimeoutException:
-            logging.warning(f"{self.fuente}-> No se encontraron productos en la página {self.page_number}")
-
     def get_current_page_number(self):
         """Retorna la siguiente página para usar en URLS."""
         self.page_number += 1
         return self.page_number
+
+    def get_product_count(self, product_count_container=None):
+        if product_count_container is not None:
+            product_text = product_count_container[0].text
+            matches = re.search(r"(\d+)", product_text)
+            if matches is not None:
+                self.product_count = matches.group(1)
 
     def get_page_count(self,total_products):
         """Retornar la cantidad de páginas totales que puede contener la consulta."""

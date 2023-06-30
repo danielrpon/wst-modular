@@ -210,10 +210,24 @@ class InkafarmaProduct(Product):
         if value is not None:
             self.product_name = value.attrs["alt"]
 
+    def sku_setter(self, value=None):
+        if value is not None:
+            matches = re.search(r"/((\d.+)|(\w+\d+))", value.attrs["href"])
+            if matches is not None:
+                self.sku = matches.group(1)
+
     def discount_price_setter(self, value=None):
         if value is not None:
-            matches = re.search(r"(\d*) ", value.text)
+            matches = re.search(r"(\d.+)", value.contents[-1].text)
             if matches is not None:
                 self.discount_price = matches.group(1)
                 if self.regular_price is None:
                     self.regular_price = self.discount_price
+
+    def regular_price_setter(self, value=None):
+        if value is not None:
+            matches = re.search(r"(\d.+)", value.contents[-1].text)
+            if matches is not None:
+                self.regular_price = matches.group(1)
+                if self.discount_price is None:
+                    self.discount_price = self.regular_price
