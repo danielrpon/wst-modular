@@ -5,7 +5,7 @@ import os
 from configs import all_configurations
 
 configuraciones = all_configurations
-
+#
 # CSV
 output_file_path = os.path.join("./", "output.csv")
 file_exists = os.path.exists(output_file_path)
