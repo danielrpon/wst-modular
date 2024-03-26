@@ -34,19 +34,26 @@ with open(output_file_path, mode, newline="", encoding="ISO-8859-1") as output_f
         scrapper = scrapper_class(
             **fuente
         )
-
-        for index, product in enumerate(scrapper.get_products("mujer-prendas-exterior-l1184")):
-            writer.writerow(
-                {
-                    "fecha": datetime.datetime.now(),
-                    "sku": product.sku,
-                    "ean": product.ean,
-                    "pais": fuente["pais"].title(),
-                    "fuente": fuente["fuente"].title(),
-                    "brand": product.brand,
-                    "product_name": product.product_name,
-                    "precio_normal": product.regular_price,
-                    "precio_descuento": product.discount_price,
-                    "imagen": product.image
-                }
-            )
+        zara_categories = ["mujer-prendas-exterior-l1184",
+                           "mujer-chaquetas-l1114",
+                           "mujer-blazers-l1055",
+                           "mujer-vestidos-l1066",
+                           "mujer-camisas-l1217",
+                           "mujer-camisetas-l1362",
+                           ]
+        for category in zara_categories:
+            for index, product in enumerate(scrapper.get_products(category)):
+                writer.writerow(
+                    {
+                        "fecha": datetime.datetime.now(),
+                        "sku": product.sku,
+                        "ean": product.ean,
+                        "pais": fuente["pais"].title(),
+                        "fuente": fuente["fuente"].title(),
+                        "brand": product.brand,
+                        "product_name": product.product_name,
+                        "precio_normal": product.regular_price,
+                        "precio_descuento": product.discount_price,
+                        "imagen": product.image
+                    }
+                )
