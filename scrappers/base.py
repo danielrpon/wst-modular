@@ -333,3 +333,65 @@ class MercadolibreScrapper(BaseScrapper):
         """Retorna la siguiente página para usar en URLS."""
         self.page_number += 1
         return self.page_number
+
+
+class ZaraScrapper(BaseScrapper):
+
+    def get_selenium_driver(self):
+        driver = super().get_selenium_driver()
+        driver.get(self.get_search_url())
+        logging.info(f"Esperando modal de Región")
+        time.sleep(5)
+
+        try:
+            driver.execute_script(
+                f'document.querySelector(".zds-button.geolocation-modal__button.zds-button--primary").click();'
+            )
+            modal_not_accepted = False
+        except JavascriptException:
+            logging.warning(f"{self.fuente}-> No se encontró un modal de región.")
+
+        logging.info(f"{self.fuente}-> Cambiando modo de visualización.")
+
+        try:
+            driver.execute_script(
+                f'document.querySelector("#theme-app > div > div > header > div.category-topbar__bar > div.view-option-selector.products-category-view__zoom-selector > button:nth-child(3)").click();'
+            )
+        except JavascriptException as e:
+            logging.warning(e)
+            logging.warning(f"{self.fuente}-> No se encontró un selector de página siguiente.")
+        return driver
+
+    def get_page_count(self):
+        """Personalización para dejar solo 1 Página"""
+        return 1
+
+    def get_product_data(self, product):
+        """Recorre los selectores en busca de sus valores."""
+        # Obtener una lista de atributos de selectores
+        # TODO mover a una constante de clase
+        attributes = [
+            "sku_selector",
+            "ean_selector",
+            "brand_selector",
+            "product_name_selector",
+            "regular_price_selector",
+            "discount_price_selector",
+            "image_selector",
+        ]
+
+        selector_data = {}
+        # Obtener el valor de cada selector
+        for attribute in attributes:
+            if getattr(self, attribute, None) is not None:
+                selector_data[attribute] = product.select_one(
+                    getattr(self, attribute, None)
+                )
+            else:
+                selector_data[attribute] = None
+
+            # Special case SKU
+            if attribute == "sku_selector":
+                selector_data[attribute] = product
+
+        return self.product_class(**selector_data)

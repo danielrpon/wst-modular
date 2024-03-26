@@ -35,7 +35,7 @@ with open(output_file_path, mode, newline="", encoding="ISO-8859-1") as output_f
             **fuente
         )
 
-        for index, product in enumerate(scrapper.get_products("Pantene")):
+        for index, product in enumerate(scrapper.get_products("mujer-prendas-exterior-l1184")):
             writer.writerow(
                 {
                     "fecha": datetime.datetime.now(),

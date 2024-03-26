@@ -231,3 +231,36 @@ class InkafarmaProduct(Product):
                 self.regular_price = matches.group(1)
                 if self.discount_price is None:
                     self.discount_price = self.regular_price
+
+
+class ZaraProduct(Product):
+    def get_cleaned_price(self, value=None):
+        """Funcion auxilar para convertir $15.600 en 15600"""
+        if value is not None:
+            return value.text.replace(".", "")[2:]
+        return None
+
+    def sku_setter(self, value=None):
+        """Procesa la información de SKU desde la url de la imagen."""
+        if value is not None:
+            self.sku = value.attrs['data-productid']
+
+    def product_name_setter(self, value=None):
+        """Procesa la información de Nombre desde el ALT de la imagen."""
+        if value is not None:
+            self.product_name = value.attrs["alt"]
+
+    def regular_price_setter(self, value=None):
+        """Asigna el valor del precio regular"""
+        self.regular_price = self.get_cleaned_price(value=value)
+        if self.discount_price is None:
+            self.discount_price = self.regular_price
+
+    def discount_price_setter(self, value=None):
+        """Asigna el valor del precio con descuento"""
+        if value is not None:
+            self.discount_price = self.get_cleaned_price(value=value)
+
+        if self.discount_price == "":
+            if self.regular_price:
+                self.discount_price = self.regular_price
